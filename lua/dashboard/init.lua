@@ -135,11 +135,18 @@ function db:cache_opts()
   local uv = vim.loop
   local path = conf_cache_path()
   if self.opts.config.shortcut then
-    for _, item in pairs(self.opts.config.shortcut) do
-      if type(item.action) == 'function' then
-        ---@diagnostic disable-next-line: param-type-mismatch
-        local dump = assert(string.dump(item.action))
-        item.action = dump
+    if type(self.opts.config.shortcut) == 'function' then
+      ---@diagnostic disable-next-line: param-type-mismatch
+      local dump = assert(string.dump(self.opts.config.shortcut))
+      self.opts.config.shortcut = dump
+    elseif type(self.opts.config.shortcut) == 'table' then
+      ---@diagnostic disable-next-line: param-type-mismatch
+      for _, item in pairs(self.opts.config.shortcut) do
+        if type(item.action) == 'function' then
+          ---@diagnostic disable-next-line: param-type-mismatch
+          local dump = assert(string.dump(item.action))
+          item.action = dump
+        end
       end
     end
   end
