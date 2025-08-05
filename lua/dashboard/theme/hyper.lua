@@ -3,6 +3,10 @@ local utils = require('dashboard.utils')
 local ns = api.nvim_create_namespace('dashboard')
 
 local function gen_shortcut(config)
+  if type(config.shortcut) == 'function' then
+    config.shortcut = config.shortcut()
+  end
+
   local shortcut = config.shortcut
     or {
       { desc = '[  Github]', group = 'DashboardShortCut' },
@@ -125,6 +129,7 @@ local function project_list(config, callback)
     limit = 8,
     enable = true,
     icon = '󰏓 ',
+    item_icon = ' ',
     icon_hl = 'DashboardRecentProjectIcon',
     action = 'Telescope find_files cwd=',
     label = ' Recent Projects:',
@@ -141,11 +146,11 @@ local function project_list(config, callback)
     local blank_size = config.shortcuts_left_side and 4 or 3
     for _, dir in ipairs(list or {}) do
       dir = dir:gsub(vim.env.HOME, '~')
-      table.insert(res, (' '):rep(blank_size) .. ' ' .. dir)
+      table.insert(res, (' '):rep(blank_size) .. config.project.item_icon .. dir)
     end
 
     if #res == 0 then
-      table.insert(res, (' '):rep(3) .. ' empty project')
+      table.insert(res, (' '):rep(3) .. config.project.item_icon .. 'empty project')
     else
       reverse(res)
     end
@@ -553,7 +558,11 @@ local function theme_instance(config)
       utils.disable_move_key(config.bufnr)
     end
     require('dashboard.theme.header').generate_header(config)
-    if not config.shortcut or not vim.tbl_isempty(config.shortcut) then
+    if
+      not config.shortcut
+      or type(config.shortcut) == 'function'
+      or not vim.tbl_isempty(config.shortcut)
+    then
       gen_shortcut(config)
     end
     load_packages(config)
@@ -565,9 +574,9 @@ local function theme_instance(config)
       map_key(config, key)
     end
     require('dashboard.events').register_lsp_root(config.path)
-    local size = math.floor(vim.o.lines / 2)
-      - math.ceil(api.nvim_buf_line_count(config.bufnr) / 2)
-      - 2
+
+    local size = math.floor(((vim.o.lines - vim.api.nvim_buf_line_count(config.bufnr)) / 2))
+
     local fill = utils.generate_empty_table(size)
     api.nvim_buf_set_lines(config.bufnr, 0, 0, false, fill)
     vim.bo[config.bufnr].modifiable = false
@@ -577,6 +586,7 @@ local function theme_instance(config)
       api.nvim_exec_autocmds('User', {
         pattern = 'DashboardLoaded',
         modeline = false,
+        data = { buf = config.bufnr },
       })
     end)
     project_delete()
